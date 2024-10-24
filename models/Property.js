@@ -6,6 +6,7 @@ const propertySchema = new mongoose.Schema ({
   location: String,
   amenities: [String],
   image: String,
+  vrImage: String,
   available: {type: Boolean, default: true},
 });
 
