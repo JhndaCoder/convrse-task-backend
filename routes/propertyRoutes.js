@@ -7,10 +7,21 @@ const {
 const router = express.Router ();
 
 router.get ('/', authMiddleware, async (req, res) => {
+  const {location, minPrice, maxPrice, availability, search} = req.query;
+
   try {
+    const query = {};
+
+    if (location) query.location = location;
+    if (minPrice) query.price = {...query.price, $gte: minPrice};
+    if (maxPrice) query.price = {...query.price, $lte: maxPrice};
+    if (availability) query.availability = availability;
+    if (search) query.name = {$regex: search, $options: 'i'};
+
     const properties = await Property.find ();
     res.json (properties);
   } catch (error) {
+    console.error ('Error fetching properties:', error);
     res.status (500).json ({error: 'Failed to fetch properties'});
   }
 });
