@@ -1,10 +1,11 @@
-const logger = require("../utils/logger");
+const errorHandler = (err, req, res, next) => {
+  console.error ('Error:', err);
+  if (res.headersSent) {
+    return next (err);
+  }
 
-const errorHandler = (err, req, res) => {
-  logger.error(err.message, { stack: err.stack });
-  res.status(err.statusCode || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
+  res.status (err.status || 500).json ({
+    error: err.message || 'Internal Server Error',
   });
 };
 
