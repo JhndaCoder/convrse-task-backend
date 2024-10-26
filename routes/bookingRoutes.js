@@ -24,7 +24,9 @@ router.post ('/', authMiddleware, async (req, res) => {
     const existingBooking = await Booking.findOne ({
       property: propertyId,
       bookingDate,
+      status: {$ne: 'cancelled'}, // Only block if not cancelled
     });
+
     if (existingBooking) {
       return res
         .status (400)
@@ -67,12 +69,29 @@ router.put ('/update-status/:id', authMiddleware, async (req, res) => {
   const {status, userEmail} = req.body;
 
   try {
-    const booking = await Booking.findById (req.params.id);
+    const booking = await Booking.findById (req.params.id).populate (
+      'property'
+    );
     if (!booking) {
       console.error ('Booking not found for ID:', req.params.id);
       return res.status (404).json ({error: 'Booking not found.'});
     }
 
+    // If the status is being changed to 'confirmed', check for conflicts
+    if (status === 'confirmed') {
+      const conflictingBooking = await Booking.findOne ({
+        _id: {$ne: booking._id}, // Exclude the current booking
+        property: booking.property._id,
+        bookingDate: booking.bookingDate,
+        status: 'confirmed', // Only check confirmed bookings
+      });
+
+      if (conflictingBooking) {
+        return res.status (400).json ({
+          error: 'Another booking already exists for this property and date.',
+        });
+      }
+    }
     if (userEmail) {
       const user = await User.findOne ({email: userEmail});
       if (!user) {
@@ -81,7 +100,6 @@ router.put ('/update-status/:id', authMiddleware, async (req, res) => {
       }
       booking.user = user._id;
     }
-
     booking.status = status;
     await booking.save ();
 
